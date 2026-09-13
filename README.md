@@ -8,6 +8,13 @@ forecast — plus a built-out backend pipeline and an operations dashboard.
 **Live pieces:** the public tracker (`/index.html`) and the system-status / admin
 dashboard (`/admin.html`).
 
+**Actual production hosting:** GitHub Pages, deployed by `.github/workflows/pages.yml`, with
+`elninotracker.org` attached as a custom domain under this repo's Settings → Pages (DNS-pointed).
+The Cloudflare Pages instructions in `DEPLOYMENT_GUIDE.md` describe an alternative/original
+hosting path and are kept for reference, but they are **not** what's currently live — in
+particular, `public/_headers` has no effect on GitHub Pages; see the note at the top of that
+file for what's actually enforced.
+
 ## The four documents
 
 | Read this | When you want to |

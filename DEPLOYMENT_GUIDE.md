@@ -8,6 +8,15 @@ should see after each one and what to do if it goes wrong.
 Total time for a first-timer: about **30–45 minutes**. You will end with a live, auto-updating
 website on a free `https://` address.
 
+> **Status note:** this guide's Part 4 walks through Cloudflare Pages, but the site as actually
+> deployed today runs on **GitHub Pages** (via `.github/workflows/pages.yml`), with
+> `elninotracker.org` attached as a custom domain under this repo's Settings → Pages. The
+> Cloudflare instructions below remain valid if hosting ever moves, but skip to README Section 2
+> / GitHub Pages if you're setting this project up as it currently runs. One consequence: the
+> `public/_headers` file (Part 4's "authoritative" CSP/security headers) only takes effect on
+> Cloudflare/Netlify — GitHub Pages ignores it entirely, so the `<meta http-equiv="Content-
+> Security-Policy">` tag in each HTML file is the only CSP actually enforced in production.
+
 **The plan, in plain words:**
 1. Install two free tools (Git and a code editor) — *skip if you already have them*.
 2. Preview the site on your own machine.

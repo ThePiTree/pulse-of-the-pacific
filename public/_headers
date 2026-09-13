@@ -1,10 +1,19 @@
-# Security headers for Cloudflare Pages (picked up automatically at deploy).
-# Netlify uses the same file format. For other hosts, replicate these in
-# your server/edge config. The CSP here is authoritative; the <meta> CSP in
-# each HTML file is a fallback for hosts that ignore this file.
+# Security headers for Cloudflare Pages / Netlify (picked up automatically at deploy on
+# those hosts only).
+#
+# CORRECTION (see DEPLOYMENT_GUIDE.md / README.md hosting note): this project is currently
+# deployed via .github/workflows/pages.yml to GitHub Pages, with elninotracker.org attached
+# as a custom domain under Settings > Pages. GitHub Pages does NOT read this file — none of
+# these headers are actually served in production right now. The <meta http-equiv> CSP tag
+# in each HTML file is what's actually enforced today (and only CSP can be expressed that
+# way; X-Frame-Options, Permissions-Policy, and the cache rules below have no meta-tag
+# equivalent and are simply absent in production until hosting changes).
+#
+# This file is kept in sync anyway so it's ready if the site ever moves to Cloudflare
+# Pages / Netlify / any host that honors it — do not treat it as the current source of truth.
 
 /*
-  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'; frame-ancestors 'none'; upgrade-insecure-requests
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://www.google-analytics.com; connect-src 'self' https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com; base-uri 'none'; form-action 'none'; object-src 'none'; frame-ancestors 'none'; upgrade-insecure-requests
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY
   Referrer-Policy: strict-origin-when-cross-origin
