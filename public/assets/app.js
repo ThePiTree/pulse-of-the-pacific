@@ -46,13 +46,24 @@ function parseONIascii(txt){
   return out;
 }
 
+// An index value exactly as NOAA's tables print it: one decimal, an exact half rounded
+// up (0.45 -> 0.5, -0.45 -> -0.4), returned in whole TENTHS so every threshold below is
+// an integer comparison. NOAA applies the +/-0.5 C threshold to this tabulated value,
+// not to the two-decimal value in its data file. The same rule lives in
+// scripts/enso_rule.py; tests/test_frontend.mjs holds the two to one NOAA table.
+function tenths(v){ return Math.floor((Math.round(v*100)+5)/10); }
+
+// NOAA's episode rule: tabulated value at or beyond +/-0.5 for >= 5 consecutive
+// overlapping seasons => "E" (El Nino) / "L" (La Nina), otherwise "N".
 function classifySeq(recs){
-  const v=recs.map(r=>r.v); const out=v.map(()=> "N"); const n=v.length;
+  const side=recs.map(r=>{ const t=tenths(r.v); return t>=5 ? 1 : t<=-5 ? -1 : 0; });
+  const n=side.length, out=side.map(()=> "N");
   let i=0;
   while(i<n){
-    if(v[i]>=0.5){let j=i;while(j<n&&v[j]>=0.5)j++; if(j-i>=5)for(let k=i;k<j;k++)out[k]="E"; i=j;}
-    else if(v[i]<=-0.5){let j=i;while(j<n&&v[j]<=-0.5)j++; if(j-i>=5)for(let k=i;k<j;k++)out[k]="L"; i=j;}
-    else i++;
+    if(side[i]===0){ i++; continue; }
+    let j=i; while(j<n && side[j]===side[i]) j++;
+    if(j-i>=5) for(let k=i;k<j;k++) out[k] = side[i]>0 ? "E" : "L";
+    i=j;
   }
   recs.forEach((r,k)=>r.c=out[k]); return recs;
 }
@@ -115,7 +126,7 @@ async function bootData(){
 function latestPulse(){
   if(DATA.wksst && DATA.wksst.length){
     const w = DATA.wksst[DATA.wksst.length-1];
-    return { v:w.v, t:w.t, kind:"weekly", label:"weekly Niño-3.4" };
+    return { v:w.v, t:w.t, d:w.d, kind:"weekly", label:"weekly Niño-3.4" };
   }
   const o = DATA.oni[DATA.oni.length-1];
   return { v:o.v, t:o.t, kind:"oni", label:o.s+" ONI" };
@@ -123,10 +134,11 @@ function latestPulse(){
 
 /* ---------- Phase helpers ---------- */
 function phaseOf(v){
-  if(v>=1.5) return {key:"E", label:"Strong El Niño", color:"#ff7a4d"};
-  if(v>=0.5) return {key:"E", label:"El Niño", color:"#e85d3d"};
-  if(v<=-1.5) return {key:"L", label:"Strong La Niña", color:"#3a9be8"};
-  if(v<=-0.5) return {key:"L", label:"La Niña", color:"#2b6fb3"};
+  const t=tenths(v);   // thresholds apply to the value as tabulated (one decimal), like NOAA's
+  if(t>=15) return {key:"E", label:"Strong El Niño", color:"#ff7a4d"};
+  if(t>=5) return {key:"E", label:"El Niño", color:"#e85d3d"};
+  if(t<=-15) return {key:"L", label:"Strong La Niña", color:"#3a9be8"};
+  if(t<=-5) return {key:"L", label:"La Niña", color:"#2b6fb3"};
   return {key:"N", label:"ENSO-neutral", color:"#6f8aa8"};
 }
 // anomaly -> diverging color (cool blue / neutral / warm vermilion)
@@ -254,38 +266,73 @@ function fracToDate(t){
   return d.getUTCDate()+" "+["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][d.getUTCMonth()]+" "+y;
 }
 
+// "2026-11-04" -> "4 Nov 2026" (the exact week date the pipeline stores since Nov 2026).
+function isoToShort(iso){
+  const p = String(iso).split("-");
+  return (+p[2])+" "+["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][(+p[1])-1]+" "+p[0];
+}
+// Signed one-decimal text of the tabulated value, e.g. +2.5 / -0.4 / 0.0 - the number
+// NOAA's own table shows for the same season (see tenths()).
+function signed1(v){ const t=tenths(v); return (t>0?"+":"")+(t/10).toFixed(1); }
+
+// Whole-degree chart bounds that always contain the data. The defaults keep the
+// familiar scale; a record-strength event widens the axis instead of running off it.
+function axisBounds(values, defMin, defMax){
+  let lo=defMin, hi=defMax;
+  for(const v of values){
+    if(v==null || !isFinite(v)) continue;
+    if(v > hi-0.15) hi = Math.ceil(v+0.15);
+    if(v < lo+0.15) lo = Math.floor(v-0.15);
+  }
+  return [lo,hi];
+}
+
 function renderStatus(){
   const recs = DATA.oni;
   const last = recs[recs.length-1];
-  // SCIENTIFIC RULE: the ENSO *phase* is defined by the ONI (3-month mean),
-  // never by a single weekly reading. The weekly value is shown as the freshest
-  // pulse, clearly labelled, but the phase pill and hero word key off ONI.
-  const oniPhase = phaseOf(last.v);
+  // SCIENTIFIC RULE: the ENSO *phase* comes from a 3-month index, never from a
+  // single weekly reading. Since February 2026 NOAA's official index for ENSO
+  // monitoring is the Relative ONI (RONI), so the phase pill and hero word follow
+  // RONI whenever the live RONI feed is present and fall back to the ONI when it
+  // is not. Both values are printed, so the reader always sees which is which.
+  // The weekly value stays in its own cell as the freshest pulse.
+  const roniLast = (DATA.roni && DATA.roni.length) ? DATA.roni[DATA.roni.length-1] : null;
+  const official = roniLast || last;
+  const phase = phaseOf(official.v);
   const pulse = latestPulse();
   const pulsePhase = phaseOf(pulse.v);
 
-  const heroWord = last.v>=0.5 ? "warming" : last.v<=-0.5 ? "cooling" : "breathing";
+  const heroWord = phase.key==="E" ? "warming" : phase.key==="L" ? "cooling" : "breathing";
   const hp = document.getElementById("heroPhase"); if(hp) hp.textContent = heroWord;
 
-  document.getElementById("phaseTxt").textContent = oniPhase.label;
-  document.querySelector("#phasePill .orb").style.background = oniPhase.color;
-  document.getElementById("phasePill").style.color = oniPhase.color;
-  document.getElementById("phaseSub").textContent = `${last.s} ${last.y} ONI · official 3-month index`;
+  document.getElementById("phaseTxt").textContent = phase.label;
+  document.querySelector("#phasePill .orb").style.background = phase.color;
+  document.getElementById("phasePill").style.color = phase.color;
+  const sub = document.getElementById("phaseSub");
+  if(roniLast){
+    sub.textContent = (roniLast.s===last.s && roniLast.y===last.y)
+      ? `${last.s} ${last.y} · RONI ${signed1(roniLast.v)} · ONI ${signed1(last.v)}`
+      : `RONI ${signed1(roniLast.v)} (${roniLast.s} ${roniLast.y}) · ONI ${signed1(last.v)} (${last.s} ${last.y})`;
+    sub.title = "Phase follows the Relative ONI (RONI), NOAA's official ENSO index since February 2026. The long-standing ONI is shown alongside.";
+  }else{
+    sub.textContent = `${last.s} ${last.y} · ONI ${signed1(last.v)} · 3-month index`;
+    sub.title = "Phase follows the Oceanic Niño Index (ONI). The Relative ONI feed is not available.";
+  }
 
   // Freshest reading cell: weekly Niño-3.4 when the live feed exists, else latest ONI.
   const lbl = document.getElementById("pulseLabel");
   if(lbl) lbl.textContent = pulse.kind==="weekly" ? "Live Niño 3.4 · weekly" : "Latest ONI";
   const ov = document.getElementById("oniVal");
-  ov.textContent = (pulse.v>0?"+":"")+pulse.v.toFixed(1);
+  ov.textContent = signed1(pulse.v);
   ov.style.color = pulsePhase.color;
   document.getElementById("oniSeason").textContent =
-    pulse.kind==="weekly" ? `°C · week of ${fracToDate(pulse.t)}` : `°C · Niño 3.4 · ${last.s} ${last.y}`;
+    pulse.kind==="weekly" ? `°C · week of ${pulse.d ? isoToShort(pulse.d) : fracToDate(pulse.t)}` : `°C · Niño 3.4 · ${last.s} ${last.y}`;
 
   // trend: ONI vs ONI twelve seasons earlier — like compared with like.
   const past = recs[Math.max(0,recs.length-13)];
-  const d = last.v - past.v;
+  const d = tenths(last.v - past.v);          // change in whole tenths: no "+0.0" with an arrow
   const tv = document.getElementById("trendVal");
-  tv.textContent = (d>0?"▲ +":d<0?"▼ ":"– ")+Math.abs(d).toFixed(1);
+  tv.textContent = (d>0?"▲ +":d<0?"▼ ":"– ")+(Math.abs(d)/10).toFixed(1);
   tv.style.color = d>0? "#ff7a4d" : d<0? "#3a9be8" : "#6f8aa8";
   document.getElementById("trendSub").textContent = `since ${past.s} ${past.y}`;
 
@@ -368,6 +415,10 @@ function drawONI(){
     });
   }
 
+  // y-range: ±3 by default, widened by whole degrees if any bar (or the RONI line) needs it
+  const yVals = recs.map(r=>r.v).concat(series[1] ? series[1].data.map(d=>d[1]) : []);
+  const [yLo,yHi] = axisBounds(yVals, -3, 3);
+
   oniChart.setOption({
     backgroundColor:"transparent",
     grid:{left:46,right:18,top:24,bottom:34},
@@ -383,8 +434,11 @@ function drawONI(){
       formatter:(ps)=>{
         const p=ps[0]; const idx=p.dataIndex; const r=recs[idx];
         const ph=phaseOf(r.v);
-        let s=`<b style="font-family:Space Grotesk">${r.s} ${r.y}</b><br/>ONI <b style="color:${ph.color}">${r.v>0?"+":""}${r.v.toFixed(1)} °C</b><br/><span style="color:${ph.color}">${ph.label}</span>`;
-        if(ps[1]) s+=`<br/>RONI ~ ${ps[1].value[1]>0?"+":""}${ps[1].value[1]} °C`;
+        let s=`<b style="font-family:Space Grotesk">${r.s} ${r.y}</b><br/>ONI <b style="color:${ph.color}">${signed1(r.v)} °C</b><br/><span style="color:${ph.color}">${ph.label}</span>`;
+        if(ps[1] && ps[1].value[1]!=null){
+          const rv = ps[1].value[1], real = DATA.roni && DATA.roni.length;
+          s+=`<br/>RONI ${real?"":"≈ "}${signed1(+rv)} °C`;
+        }
         return s;
       }
     },
@@ -396,7 +450,7 @@ function drawONI(){
       splitLine:{show:false}
     },
     yAxis:{
-      type:"value", min:-2.8, max:2.8, interval:1,
+      type:"value", min:yLo, max:yHi, interval:1,
       name:"°C anomaly", nameTextStyle:{color:"#5f7a9a",fontFamily:"JetBrains Mono",fontSize:10,align:"left"},
       axisLine:{show:false}, axisTick:{show:false},
       axisLabel:{color:"#5f7a9a",fontFamily:"JetBrains Mono",fontSize:11,formatter:(v)=>v>0?"+"+v:v},
@@ -615,7 +669,7 @@ function computeForecast(){
   const sd=Math.sqrt(vals.slice(-360).reduce((a,b)=>a+b*b,0)/Math.min(360,vals.length)); // ~spread
 
   const out=[];
-  let cur=last.v;
+  let cur=last.v, uncPrev=0;
   for(let k=1;k<=LEAD;k++){
     const mIdx=((last.m-1+k)%12)+1; // calendar month of this lead
     let mean;
@@ -626,7 +680,9 @@ function computeForecast(){
     let unc = sd*Math.sqrt(1-Math.pow(r1,2*k))*1.05;
     // spring predictability barrier: inflate uncertainty when target month is MAM (3,4,5)
     if(mIdx>=3&&mIdx<=5) unc*=1.45;
-    unc=Math.max(0.12,unc);
+    // A projection that has crossed the barrier does not become MORE certain afterwards:
+    // uncertainty never shrinks with lead time.
+    unc=Math.max(0.12,unc,uncPrev); uncPrev=unc;
     const tFrac=+(last.y+( (last.m-1+k)+0.5)/12).toFixed(4);
     out.push({t:tFrac, m:mIdx, mean:+mean.toFixed(2), lo:+(mean-unc).toFixed(2), hi:+(mean+unc).toFixed(2)});
     cur=mean;
@@ -649,11 +705,14 @@ function drawForecast(){
   const meanData=[[last.t,last.v]].concat(fc.map(f=>[f.t,f.mean]));
   const loData=[[last.t,last.v]].concat(fc.map(f=>[f.t,f.lo]));
   const hiData=[[last.t,last.v]].concat(fc.map(f=>[f.t,f.hi]));
-  // band as stacked area (lo transparent + (hi-lo) translucent)
-  const bandBase=loData.map(d=>[d[0],d[1]]);
-  const bandSpan=hiData.map((d,i)=>[d[0], +(d[1]-loData[i][1]).toFixed(2)]);
 
   updateProbabilities(fc[0]);
+
+  // Whole-degree y-range that contains the history, the projection and the whole band.
+  const [yLo,yHi] = axisBounds(histData.concat(loData,hiData).map(d=>d[1]), -2, 3);
+  // Half-year x ticks: a year label at each 1 January, "Jul" at mid-year.
+  const xMin = Math.floor(hist[0].t*2)/2;
+  const xMax = Math.ceil((fc[fc.length-1].t+0.05)*2)/2;
 
   fcChart.setOption({
     backgroundColor:"transparent",
@@ -662,34 +721,44 @@ function drawForecast(){
     tooltip:{trigger:"axis",backgroundColor:"rgba(10,20,36,.97)",borderColor:"#162a44",
       textStyle:{color:"#e8edf4",fontFamily:"JetBrains Mono",fontSize:11.5},
       formatter:(ps)=>{
-        const t=ps[0].value[0]; const yr=Math.floor(t); const mo=Math.round((t-yr)*12-0.5);
+        const rel=ps.filter(p=>p.seriesName==="Observed"||p.seriesName==="Projection");
+        if(!rel.length) return "";
+        const t=rel[0].value[0]; const yr=Math.floor(t); const mo=Math.round((t-yr)*12-0.5);
         const mn=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][Math.max(0,Math.min(11,mo))];
         let s=`<b style="font-family:Space Grotesk">${mn} ${yr}</b>`;
-        ps.forEach(p=>{ if(p.seriesName==="Observed"||p.seriesName==="Projection"){const v=p.value[1];s+=`<br/>${p.seriesName}: <b>${v>0?"+":""}${(+v).toFixed(1)}</b>`;} });
+        rel.forEach(p=>{ const v=p.value[1]; s+=`<br/>${p.seriesName}: <b>${signed1(+v)}</b>`; });
         const f=fc.find(x=>Math.abs(x.t-t)<0.001);
         if(f) s+=`<br/><span style="color:#7d96b3">range ${f.lo>0?"+":""}${f.lo} … ${f.hi>0?"+":""}${f.hi}</span>`;
         return s;
       }},
-    xAxis:{type:"value",min:hist[0].t,max:fc[fc.length-1].t+0.1,
+    xAxis:{type:"value",min:xMin,max:xMax,interval:0.5,
       axisLine:{lineStyle:{color:"#1c3350"}},
-      axisLabel:{color:"#5f7a9a",fontFamily:"JetBrains Mono",fontSize:10,formatter:(v)=>{const yr=Math.floor(v);const mo=Math.round((v-yr)*12-0.5);return mo===0?yr:["","F","M","A","M","J","J","A","S","O","N","D"][mo];}},
+      axisLabel:{color:"#5f7a9a",fontFamily:"JetBrains Mono",fontSize:10,
+        formatter:(v)=>Math.abs(v-Math.round(v))<0.01 ? String(Math.round(v)) : "Jul"},
       splitLine:{show:false}},
-    yAxis:{type:"value",min:-2.2,max:2.8,interval:1,
+    yAxis:{type:"value",min:yLo,max:yHi,interval:1,
       axisLine:{show:false},axisTick:{show:false},
       axisLabel:{color:"#5f7a9a",fontFamily:"JetBrains Mono",fontSize:10,formatter:(v)=>v>0?"+"+v:v},
       splitLine:{lineStyle:{color:"#0f2138"}}},
     series:[
-      // uncertainty band
-      {name:"_lo",type:"line",data:bandBase,stack:"band",lineStyle:{opacity:0},symbol:"none",silent:true,areaStyle:{opacity:0}},
-      {name:"_span",type:"line",data:bandSpan,stack:"band",lineStyle:{opacity:0},symbol:"none",silent:true,areaStyle:{color:"rgba(61,214,196,0.18)"}},
+      // Uncertainty band: ONE polygon — upper edge left-to-right, lower edge back again.
+      // Do NOT rebuild this with `stack`: on two value axes ECharts stacks the x
+      // dimension, which silently drew the previous stacked band off the chart.
+      {name:"Uncertainty",type:"custom",silent:true,clip:true,z:2,tooltip:{show:false},
+        data:[[last.t,last.v]],
+        renderItem:(params,api)=>({
+          type:"polygon",silent:true,
+          shape:{points:hiData.map(d=>api.coord(d)).concat(loData.slice().reverse().map(d=>api.coord(d)))},
+          style:{fill:"rgba(61,214,196,0.18)"}
+        })},
       // observed history
       {name:"Observed",type:"line",data:histData,showSymbol:false,lineStyle:{color:"#8aa6c4",width:2},z:6},
       // projection
       {name:"Projection",type:"line",data:meanData,showSymbol:false,
         lineStyle:{color:"#3dd6c4",width:2.6,type: fcState.model==="climo"?[5,4]:"solid"},z:7,
         markLine:{silent:true,symbol:"none",data:[
-          {yAxis:0.5,lineStyle:{color:"rgba(232,93,61,.35)",type:[4,4]}},
-          {yAxis:-0.5,lineStyle:{color:"rgba(43,111,179,.35)",type:[4,4]}},
+          {yAxis:0.5,lineStyle:{color:"rgba(232,93,61,.35)",type:[4,4]},label:{show:true,formatter:"El Niño +0.5",color:"rgba(232,93,61,.7)",fontFamily:"JetBrains Mono",fontSize:9,position:"insideStartTop"}},
+          {yAxis:-0.5,lineStyle:{color:"rgba(43,111,179,.35)",type:[4,4]},label:{show:true,formatter:"La Niña −0.5",color:"rgba(77,159,224,.7)",fontFamily:"JetBrains Mono",fontSize:9,position:"insideStartBottom"}},
           {xAxis:last.t,lineStyle:{color:"rgba(125,150,179,.3)",type:[3,3]},label:{show:true,formatter:"now",color:"#7d96b3",fontFamily:"JetBrains Mono",fontSize:10,position:"insideEndTop"}}
         ]}}
     ]

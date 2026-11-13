@@ -11,9 +11,11 @@
 <meta property="og:description" content="Live ENSO status, 75 years of ocean memory, global impacts, and an honest forecast — auto-updated from NOAA."/>
 <meta property="og:type" content="website"/>
 <meta property="og:url" content="https://elninotracker.org/"/>
-<!-- og:image intentionally omitted — no social-preview asset exists yet in public/. Add one
-     (e.g. public/social-preview.jpg, ~1200x630) and an og:image tag pointing to it before relying
-     on link-preview cards for sharing. -->
+<meta property="og:image" content="https://elninotracker.org/social-preview.png"/>
+<meta property="og:image:width" content="1200"/>
+<meta property="og:image:height" content="630"/>
+<meta property="og:image:alt" content="The Pulse of the Pacific: the Oceanic Niño Index from 1950 to today, El Niño peaks in red and orange, La Niña in blue."/>
+<meta name="twitter:card" content="summary_large_image"/>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='%2305080f'/%3E%3Ccircle cx='16' cy='16' r='6' fill='%233dd6c4'/%3E%3C/svg%3E"/>
 <!-- Content-Security-Policy (meta fallback). This site is live on GitHub Pages, which does not
      read the public/_headers file at all (that format only applies on Cloudflare/Netlify) — so
@@ -48,6 +50,7 @@
   }
 }
 </script>
+</head>
 <body>
 <noscript><div style="padding:24px;font-family:system-ui;background:#0c1a2e;color:#e8edf4;border-bottom:1px solid #162a44">
 This tracker needs JavaScript to draw its live charts. The underlying data is public:
@@ -110,7 +113,7 @@ This tracker needs JavaScript to draw its live charts. The underlying data is pu
     <div class="band-head fade">
       <div class="label">The century-long memory</div>
       <h2>Every El Niño and La Niña since 1950</h2>
-      <p>The Oceanic Niño Index is the official heartbeat trace of ENSO: a three-month running average of sea-surface temperature in the central Pacific. Red beats are El Niño; blue beats are La Niña. Drag to explore seven decades of the ocean's pulse.</p>
+      <p>The Oceanic Niño Index is NOAA's long-running heartbeat trace of ENSO: a three-month running average of how far sea-surface temperature in the central Pacific sits from normal. Red beats are El Niño; blue beats are La Niña. The <b>+ RONI</b> button adds the Relative ONI, NOAA's official index since February 2026. Drag to explore seven decades of the ocean's pulse.</p>
     </div>
     <div class="card card-pad fade">
       <div class="controls">
@@ -261,6 +264,7 @@ This tracker needs JavaScript to draw its live charts. The underlying data is pu
       <p>Built on open, authoritative climate data. When deployed with the included data pipeline, the leading edge of every series refreshes automatically on each source's natural cadence.</p>
     </div>
     <div class="srcgrid fade">
+      <div class="src src-wide"><div class="src-text"><div class="nm">Download this data</div><div class="ds">Every series on this page as analysis-ready CSV, with a record of how NOAA later revised recent values. Regenerated with each data refresh.</div></div><a class="lk" href="archive/">Open the data archive →</a></div>
       <div class="src"><div class="nm">NOAA CPC — ONI &amp; RONI</div><div class="ds">Official Oceanic Niño Index and the new Relative ONI (operational since Feb 2026). Monthly.</div><a class="lk" href="https://www.cpc.ncep.noaa.gov/data/indices/" target="_blank" rel="noopener">cpc.ncep.noaa.gov/data/indices</a></div>
       <div class="src"><div class="nm">NOAA OISST v2.1</div><div class="ds">Daily 0.25° sea-surface temperature and anomalies — the field rendered in the hero.</div><a class="lk" href="https://www.ncei.noaa.gov/products/optimum-interpolation-sst" target="_blank" rel="noopener">ncei.noaa.gov · OISST</a></div>
       <div class="src"><div class="nm">IRI / CPC ENSO Plume</div><div class="ds">The multi-model probabilistic forecast this site defers to for official outlooks.</div><a class="lk" href="https://iri.columbia.edu/our-expertise/climate/forecasts/enso/current/" target="_blank" rel="noopener">iri.columbia.edu · ENSO</a></div>
@@ -279,7 +283,7 @@ This tracker needs JavaScript to draw its live charts. The underlying data is pu
     </div>
     <div class="frow" style="border-top:1px solid var(--line-soft);padding-top:18px">
       <div class="tag">ENSO = El Niño–Southern Oscillation · ONI threshold ±0.5 °C over 5 overlapping seasons · Niño 3.4 = 5°N–5°S, 170°W–120°W</div>
-      <div class="tag">For decisions, consult NOAA CPC · IRI · your national met service · <a href="admin.html" style="color:var(--live);text-decoration:none">System status</a></div>
+      <div class="tag">For decisions, consult NOAA CPC · IRI · your national met service · <a href="archive/" style="color:var(--live);text-decoration:none">Data archive</a> · <a href="admin.html" style="color:var(--live);text-decoration:none">System status</a></div>
     </div>
     <div class="frow" style="border-top:1px solid var(--line-soft);padding-top:18px">
       <p class="tag creator-credit">Designed and developed by <a href="/creator/melyssa-kimura/" style="color:var(--live);text-decoration:none">Melyssa Kimura</a>.</p>

@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# Output of scripts/build_standalone.py - a build artifact, rebuilt on demand, never deployed
+dist/
+
+# Only present if you install Playwright for the optional tests/browser_check.mjs
+node_modules/
+package-lock.json
+package.json
+
+# Editors and operating systems
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

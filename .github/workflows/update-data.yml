@@ -2,13 +2,22 @@ name: Refresh ENSO data
 
 # ---------------------------------------------------------------------------
 # The scheduled backend. Each run:
-#   1. runs the parser test-suite (a red test BLOCKS any data commit),
+#   1. runs the pipeline tests (a red test BLOCKS the refresh, so a broken
+#      parser can never publish bad numbers),
 #   2. fetches + validates the latest NOAA indices (scripts/update_data.py),
-#   3. commits refreshed JSON + status.json only if something changed.
-# The host (Cloudflare Pages / Vercel / Netlify) redeploys on that commit.
+#      which also rebuilds the CSV archive in public/archive/,
+#   3. commits the refreshed JSON, status.json and archive - only if changed.
 #
-# Cadence: weekly Nino-3.4 lands Mondays; monthly indices land ~1st-5th.
-# Mon + Thu at 16:10 UTC catches everything with a safety margin.
+# DEPLOYMENT: the site is served by GitHub Pages (.github/workflows/pages.yml).
+# A commit pushed by this job does not start other workflows by itself, so
+# pages.yml redeploys through `workflow_run`, keyed on this workflow's NAME.
+#   >>> Do not rename this workflow ("Refresh ENSO data") without changing
+#   >>> pages.yml to match. tests/test_release.py checks the pair.
+#
+# Cadence: the weekly Nino-3.4 value lands on Mondays, the monthly indices
+# early each month. Mon + Thu at 16:10 UTC catches everything with a margin.
+# GitHub often starts scheduled jobs late (up to ~8 hours has been observed
+# here); that is normal and harmless.
 # ---------------------------------------------------------------------------
 
 on:
@@ -36,8 +45,8 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Run parser & validation tests (gates the refresh)
-        run: python tests/test_parsers.py
+      - name: Run the pipeline tests (gates the refresh)
+        run: python tests/run_all.py --pipeline
 
       - name: Fetch, validate, and rebuild data JSON + status telemetry
         run: python scripts/update_data.py
@@ -46,8 +55,12 @@ jobs:
         run: |
           git config user.name  "enso-data-bot"
           git config user.email "actions@users.noreply.github.com"
-          if [ -n "$(git status --porcelain public/data)" ]; then
-            git add public/data
+          # The archive folder is committed with the data when it exists. If an archive
+          # problem ever left it missing, the data must still be committed.
+          PATHS="public/data"
+          if [ -d public/archive ]; then PATHS="$PATHS public/archive"; fi
+          if [ -n "$(git status --porcelain $PATHS)" ]; then
+            git add $PATHS
             git commit -m "data: scheduled ENSO refresh $(date -u +'%Y-%m-%d %H:%M UTC')"
             git push
             echo "Committed updated data."
