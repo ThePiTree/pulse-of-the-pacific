@@ -51,7 +51,8 @@
     <div class="admin-foot">
       <div>Refresh cadence: the workflow runs Mondays &amp; Thursdays 16:10 UTC, plus manual runs
       from the GitHub Actions tab. A source is flagged <b>STALE</b> when its last success is older
-      than 1.5× its expected cadence.</div>
+      than 1.5× its expected cadence, or when its fetches succeed but its newest value has stopped
+      advancing (older than the limit the pipeline sets for that source).</div>
       <div style="margin-top:10px">Runbook: see <span class="mono">OPERATIONS_RUNBOOK.md</span> in the
       repository for the playbook on every failure mode shown here.</div>
     </div>
@@ -62,7 +63,7 @@
 <footer>
   <div class="wrap">
     <div class="frow">
-      <div><b>Pulse of the Pacific</b> — status page. Data © NOAA/CPC and partners.</div>
+      <div><b>Pulse of the Pacific</b> — status page. Data: NOAA Climate Prediction Center (public domain). <a href="index.html" style="color:var(--live)">Back to the tracker</a></div>
       <div class="tag" id="genStamp">—</div>
     </div>
   </div>

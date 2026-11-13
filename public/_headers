@@ -25,6 +25,10 @@
 /data/*
   Cache-Control: public, max-age=300, must-revalidate
 
+# The CSV archive is regenerated with every data refresh — same policy as /data/.
+/archive/*
+  Cache-Control: public, max-age=300, must-revalidate
+
 # The vendored chart library is pinned — cache forever.
 /vendor/*
   Cache-Control: public, max-age=31536000, immutable

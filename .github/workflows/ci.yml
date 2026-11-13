@@ -1,0 +1,45 @@
+name: Tests
+
+# ---------------------------------------------------------------------------
+# Runs the whole test suite on every push and pull request, so a mistake shows
+# up as a red mark next to the commit. It only reads the repository: it never
+# deploys, commits or publishes anything.
+#
+# Note: .github/workflows/pages.yml deploys every push to main whether or not
+# this check is green, so look at it BEFORE merging. The scheduled data refresh
+# runs its own subset of these tests (run_all.py --pipeline) before each fetch.
+# ---------------------------------------------------------------------------
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up Node.js (for the front-end logic tests)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Run every test suite
+        run: python tests/run_all.py

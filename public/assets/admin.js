@@ -23,8 +23,8 @@ const el = (tag, cls, text)=>{
 };
 
 const SOURCE_LABELS = {
-  oni:   ["ONI",              "Oceanic Niño Index — defines the official ENSO phase"],
-  roni:  ["RONI",             "Relative ONI — NOAA's operational index since Feb 2026"],
+  oni:   ["ONI",              "Oceanic Niño Index — NOAA's long-standing 3-month index"],
+  roni:  ["RONI",             "Relative ONI — NOAA's official index since Feb 2026; sets the headline phase"],
   wksst: ["Weekly Niño 3.4",  "Freshest surface pulse; new value every Monday"],
   soi:   ["SOI (3-mo)",       "Southern Oscillation Index — the atmospheric side"],
   heat:  ["Upper-300 m heat", "Subsurface heat anomaly, 180°W–100°W — the fuel gauge"],
@@ -45,11 +45,22 @@ function badge(state){ // ok | fail | stale | unknown
   return b;
 }
 
+// A series is "not advancing" when its fetch succeeds but its newest datum is older
+// than the per-source limit the pipeline publishes (data_age_limit_days). Either
+// NOAA stopped updating the file or our parser stopped seeing the new rows — the
+// second is exactly how the SOI series froze unnoticed for months in 2026.
+function notAdvancing(s){
+  if(!s || typeof s.data_age_days!=="number") return false;
+  const limit = (typeof s.data_age_limit_days==="number") ? s.data_age_limit_days : (s.cadence_days||35)*2+45;
+  return s.data_age_days > limit;
+}
+
 function sourceState(s){
-  // Precedence: a failed last run is FAIL (regardless of age);
-  // an ok run that has aged past 1.5x its cadence is STALE; else OK.
+  // Precedence: FAIL (last fetch failed) > STALE (series not advancing) >
+  // STALE (the last successful run is itself too old) > OK.
   if(!s) return "unknown";
   if(!s.ok) return "fail";
+  if(notAdvancing(s)) return "stale";
   const age = s.updated ? (Date.now()-Date.parse(s.updated))/86400000 : Infinity;
   return age > (s.cadence_days||35)*1.5 ? "stale" : "ok";
 }
@@ -82,6 +93,9 @@ function renderSources(status){
       if(s.ok){
         row("records", String(s.records ?? "—"));
         row("latest", `${s.latest ?? "—"}  →  ${s.value>0?"+":""}${s.value ?? "—"}`);
+        if(typeof s.data_age_days==="number"){
+          row("newest datum", `${s.data_age_days} days old` + (notAdvancing(s) ? "  ⚠ series not advancing" : ""));
+        }
       }else{
         row("last run", "failed — kept last-good data");
         const err = el("div","admin-err", s.error || "unknown error");
@@ -139,10 +153,12 @@ function renderIntegrity(oni){
   const last = recs[recs.length-1];
    const ageDays = last ? (Date.now() - Date.UTC(last.y, last.m - 1, 1))/86400000 : Infinity;
   //const ageDays = last ? (Date.now() - Date.UTC(Math.floor(last.t), Math.round((last.t%1)*12), 1))/86400000 : Infinity;
-    grid.appendChild(integrityCard("Series freshness", ageDays < 100,
+  // Window: a season centred on month m is published early in month m+2, so the newest season is
+  // normally 66–102 days past the 1st of its centre month. 115 leaves about two weeks of slack.
+  grid.appendChild(integrityCard("Series freshness", ageDays < 115,
     last ? `Latest season on disk: ${last.s} ${last.y} (${last.v>0?"+":""}${last.v}). `
-           + (ageDays<100 ? "Within the expected monthly publication window."
-                         : "Older than ~3.3 months — check pipeline runs.")
+           + (ageDays<115 ? "Within the expected monthly publication window."
+                          : "Older than ~3.8 months — check pipeline runs.")
          : "No records found."));
 }
 

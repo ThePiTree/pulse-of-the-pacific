@@ -1,0 +1,118 @@
+name: Publish data release
+
+# ---------------------------------------------------------------------------
+# Publishes dated, immutable bundles of public/archive/ as GitHub Releases, and
+# (optionally) e-mails the bundle. All calendar logic lives in
+# scripts/release_meta.py, where it is unit-tested.
+#
+#   data-YYYY-MM       every month, on the 12th (after NOAA's monthly update)
+#   data-YYYY-Qn       additionally in Jan/Apr/Jul/Oct, for the quarter just ended
+#   data-YYYY-annual   additionally in January, for the year just ended
+#
+# NOTIFICATIONS WITH NO SETUP: on the repository page choose
+#   Watch -> Custom -> Releases.  GitHub then e-mails you every bundle's link.
+#
+# E-MAIL WITH THE ZIP ATTACHED (optional): add repository secrets
+#   SMTP_HOST, SMTP_USER, SMTP_PASSWORD (an *app password*), optional MAIL_TO,
+# and optionally the repository variable EMAIL_CADENCE =
+#   weekly | monthly (default) | quarterly | annual | off.
+# With no secrets the e-mail step is skipped; nothing else changes.
+# See DATA_ARCHIVE.md section 3.
+# ---------------------------------------------------------------------------
+
+on:
+  schedule:
+    - cron: "17 6 12 * *"   # monthly bundle run (06:17 UTC on the 12th)
+    - cron: "17 6 * * 2"    # weekly tick (Tuesdays): only e-mails, and only if EMAIL_CADENCE=weekly
+  workflow_dispatch:
+    inputs:
+      kind:
+        description: "Bundle(s) to publish now (auto = whatever is due this month)"
+        type: choice
+        options: [auto, monthly, quarterly, annual, none]
+        default: auto
+      send_email:
+        description: "Also e-mail the bundle now (needs the SMTP secrets)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write            # required to create releases
+
+concurrency:
+  group: publish-data-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      # 'true' only when all three SMTP secrets exist. Secrets cannot be read in a
+      # step-level `if:`, so the test is done here and the result reused below.
+      SMTP_READY: ${{ secrets.SMTP_HOST != '' && secrets.SMTP_USER != '' && secrets.SMTP_PASSWORD != '' }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Decide what is due
+        id: plan
+        env:
+          TRIGGER: ${{ github.event_name == 'workflow_dispatch' && 'manual' || (github.event.schedule == '17 6 12 * *' && 'monthly' || 'weekly') }}
+          KIND: ${{ github.event.inputs.kind || 'auto' }}
+          CADENCE: ${{ vars.EMAIL_CADENCE || 'monthly' }}
+          SEND_EMAIL: ${{ github.event.inputs.send_email || 'false' }}
+        run: |
+          EXTRA=""
+          if [ "$SEND_EMAIL" = "true" ]; then EXTRA="--send-email"; fi
+          python3 scripts/release_meta.py plan --trigger "$TRIGGER" --kind "$KIND" --cadence "$CADENCE" $EXTRA > release_plan.tsv
+          echo "Releases to publish:"; cat release_plan.tsv
+
+      - name: Build the bundle and its notes
+        if: steps.plan.outputs.count != '0' || steps.plan.outputs.email == 'yes'
+        run: |
+          if [ ! -f public/archive/manifest.json ]; then
+            echo "::error::public/archive/ does not exist yet - run the 'Refresh ENSO data' workflow first."
+            exit 1
+          fi
+          (cd public && zip -qr ../enso-archive.zip archive)
+          python3 scripts/release_meta.py notes > RELEASE_NOTES.md
+          cat RELEASE_NOTES.md
+
+      - name: Publish releases (a tag that already exists is left untouched)
+        if: steps.plan.outputs.count != '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          while IFS=$'\t' read -r TAG TITLE; do
+            if [ -z "$TAG" ]; then continue; fi
+            if gh release view "$TAG" >/dev/null 2>&1; then
+              echo "::notice::$TAG is already published. Bundles are immutable, so it was left untouched."
+              continue
+            fi
+            cp enso-archive.zip "enso-archive-$TAG.zip"
+            gh release create "$TAG" "enso-archive-$TAG.zip" --title "$TITLE" --notes-file RELEASE_NOTES.md
+            echo "Published $TAG"
+          done < release_plan.tsv
+
+      - name: E-mail the bundle (only when SMTP secrets exist and a mail is due)
+        if: env.SMTP_READY == 'true' && steps.plan.outputs.email == 'yes'
+        env:
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ vars.SMTP_PORT || '465' }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          MAIL_TO: ${{ secrets.MAIL_TO }}
+          SUBJECT: ${{ steps.plan.outputs.subject }}
+        run: |
+          ATTACH="enso-archive-$(date -u +%Y-%m-%d).zip"
+          cp enso-archive.zip "$ATTACH"
+          python3 scripts/email_bundle.py --subject "$SUBJECT" --body RELEASE_NOTES.md --attach "$ATTACH"
+
+      - name: Explain a skipped e-mail on manual runs
+        if: env.SMTP_READY != 'true' && github.event_name == 'workflow_dispatch' && github.event.inputs.send_email == 'true'
+        run: echo "::warning::E-mail was requested but the SMTP_HOST / SMTP_USER / SMTP_PASSWORD secrets are not all set, so nothing was sent."

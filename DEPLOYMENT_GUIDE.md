@@ -16,6 +16,11 @@ website on a free `https://` address.
 > `public/_headers` file (Part 4's "authoritative" CSP/security headers) only takes effect on
 > Cloudflare/Netlify — GitHub Pages ignores it entirely, so the `<meta http-equiv="Content-
 > Security-Policy">` tag in each HTML file is the only CSP actually enforced in production.
+>
+> **November 2026:** if you are here to launch the update that added the data archive, read
+> `HANDOFF.md` instead — it has the exact steps. This guide remains the from-zero walkthrough.
+> Where it says the host "redeploys on the commit", on GitHub Pages that is done by
+> `.github/workflows/pages.yml`, which also redeploys after every data refresh.
 
 **The plan, in plain words:**
 1. Install two free tools (Git and a code editor) — *skip if you already have them*.
@@ -261,12 +266,12 @@ fetches fresh ENSO numbers from NOAA and commits them. Two quick settings make i
 2. In the left list, click **Refresh ENSO data**.
 3. Click **Run workflow** (right side) → keep branch `main` → **Run workflow**.
 4. A run appears; click it to watch the log. Green check = success. (The job runs the
-   parser test-suite first — if a test is red, the refresh is blocked by design.)
+   pipeline tests first — if a test is red, the refresh is blocked by design.)
 5. Now reload `https://YOUR-SITE/admin.html`: the banner should turn green
    ("All systems normal") with five OK source cards. That page is your ongoing
    health check — see `OPERATIONS_RUNBOOK.md` for the 2-minute weekly routine.
-   - If the log ends with new files under `public/data/`, the robot fetched fresh data and
-     committed it — and Cloudflare will redeploy within a minute.
+   - If the log ends with new files under `public/data/` and `public/archive/`, the robot
+     fetched fresh data and committed it — and the site redeploys within a minute or two.
    - If it says "No data changes — nothing to commit," that's also success; NOAA simply had
      nothing new since the shipped baseline.
 
@@ -286,9 +291,9 @@ Thursday run is a safety net. To change the schedule, edit the two `cron:` lines
 | `heat.json` | equatorial upper-300 m heat content | monthly |
 
 The site automatically lights up the extra features (real RONI line, weekly "live" reading)
-once these files appear. Until then it runs on the embedded baseline it shipped with. If any
-NOAA source is temporarily unreachable, the robot keeps the last good file and the site never
-breaks.
+once these files appear. Every run also rebuilds the downloadable CSV archive in
+`public/archive/` (see `DATA_ARCHIVE.md`). If any NOAA source is temporarily unreachable, the
+robot keeps the last good file and the site never breaks.
 
 **Checkpoint:** you have a live site that updates itself. Everything below is optional.
 
@@ -339,23 +344,24 @@ git add .
 git commit -m "describe what you changed"
 git push
 ```
-Cloudflare/Vercel redeploys automatically within a minute.
+The site redeploys automatically within a minute or two.
 
-Before pushing code changes, run the fast checks:
+Before pushing code changes, run the checks (about two seconds, nothing to install):
 ```bash
-python3 tests/test_parsers.py            # pipeline suite (also gates CI)
+python3 tests/run_all.py                 # every test suite; the same command CI runs
 node --check public/assets/app.js        # JS syntax
 ```
+Do not commit changes under `public/data/` or `public/archive/` — the robot owns those folders.
 To regenerate the offline single-file demo after edits:
 ```bash
 python3 scripts/build_standalone.py      # writes dist/el-nino-tracker-standalone.html
 ```
 
-To rebuild the ONE-TIME baseline data files from scratch (rarely needed):
+To regenerate the curated context files after editing them (rarely needed):
 ```bash
-python3 scripts/build_oni.py       # regenerates public/data/oni.json
 python3 scripts/build_context.py   # regenerates events / impacts / roni_compare
 ```
+(`public/data/oni.json` and the other index files are written only by the pipeline.)
 
 ---
 
