@@ -1,5 +1,5 @@
 {
-  "generated": "2026-11-12 22:12:40 UTC",
+  "generated": "2026-11-13 09:44:35 UTC",
   "site": "https://elninotracker.org/archive/",
   "files": [
     "enso_monthly_merged.csv",
@@ -19,26 +19,26 @@
     "index.html"
   ],
   "stats": {
-    "generated": "2026-11-12 22:12:40 UTC",
+    "generated": "2026-11-13 09:44:35 UTC",
     "oni_n": 921,
     "oni_span": "DJF 1950 → ASO 2026",
     "oni_latest": "ASO 2026",
     "roni_n": 921,
     "roni_span": "DJF 1950 → ASO 2026",
-    "wk_n": 520,
-    "wk_span": "2016-11-23 → 2026-11-04",
-    "soi_n": 888,
-    "soi_span": "Jan 1952 → Dec 2025",
+    "wk_n": 2358,
+    "wk_span": "1981-09-02 → 2026-11-04",
+    "soi_n": 907,
+    "soi_span": "Feb 1951 → Aug 2026",
     "heat_n": 574,
     "heat_span": "Jan 1979 → Oct 2026",
     "merged_n": 923,
-    "vint_rows": 3850,
+    "vint_rows": 5695,
     "vint_start": "2026-08-17",
     "rev_oni": 0,
     "rev_roni": 1,
     "rev_wksst": 7,
     "rev_soi": 0,
     "rev_heat": 3,
-    "runs_n": 27
+    "runs_n": 28
   }
 }

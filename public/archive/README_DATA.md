@@ -1,6 +1,6 @@
 # Pulse of the Pacific — Data Archive
 
-Generated from the pipeline run of 2026-11-12 22:12:40 UTC by `scripts/export_archive.py`.
+Generated from the pipeline run of 2026-11-13 09:44:35 UTC by `scripts/export_archive.py`.
 The archive is regenerated at the end of every scheduled data refresh (Mondays and
 Thursdays), so these files are exactly as current as the live site at https://elninotracker.org.
 
@@ -17,11 +17,11 @@ is in the public domain. Cite NOAA CPC as the producer and this archive as the a
 | `enso_monthly_merged.csv` | 923 | all series | Every series on one monthly axis. **Start here.** |
 | `oni.csv` | 921 | DJF 1950 → ASO 2026 | Oceanic Niño Index: 3-month running mean of sea-surface-temperature anomalies in the Niño-3.4 region (5°N–5°S, 170°W–120°W), from NOAA's ERSST analysis (ERSSTv6 as of 2026) against centered 30-year base periods that NOAA updates every 5 years. NOAA's long-standing ENSO index. |
 | `roni.csv` | 921 | DJF 1950 → ASO 2026 | Relative ONI: the Niño-3.4 anomaly minus the tropical-mean (20°S–20°N) SST anomaly, rescaled to the ONI's variance. **NOAA's official index for ENSO monitoring and prediction since February 2026.** Strong El Niños read several tenths of a degree lower than on the ONI. |
-| `nino34_weekly.csv` | 520 | 2016-11-23 → 2026-11-04 | Weekly Niño-3.4 SST anomaly from CPC's OISST-based weekly table (1991–2020 base period). The freshest surface signal. Each date is the Wednesday the week is centered on. |
-| `soi_3month.csv` | 888 | Jan 1952 → Dec 2025 | 3-month running mean of the Southern Oscillation Index (standardized Tahiti-minus-Darwin sea-level pressure), as published by CPC. Negative during El Niño. |
+| `nino34_weekly.csv` | 2358 | 1981-09-02 → 2026-11-04 | Weekly Niño-3.4 SST anomaly from CPC's OISST-based weekly table (1991–2020 base period). The freshest surface signal. Each date is the Wednesday the week is centered on. |
+| `soi_3month.csv` | 907 | Feb 1951 → Aug 2026 | 3-month running mean of the Southern Oscillation Index (standardized Tahiti-minus-Darwin sea-level pressure), as published by CPC. Negative during El Niño. |
 | `heat_content_180w_100w.csv` | 574 | Jan 1979 → Oct 2026 | Upper-ocean (0–300 m) temperature anomaly averaged over the equatorial Pacific, 180°W–100°W. Subsurface heat leads the surface by months. |
-| `vintages/*.csv` | 3850 | since 2026-08-17 | **The revision record** — one file per series; see below. |
-| `pipeline_runs.csv` | 27 | since 2026-08-17 | Append-only log of every data refresh: UTC timestamp, sources refreshed, sources that failed. |
+| `vintages/*.csv` | 5695 | since 2026-08-17 | **The revision record** — one file per series; see below. |
+| `pipeline_runs.csv` | 28 | since 2026-08-17 | Append-only log of every data refresh: UTC timestamp, sources refreshed, sources that failed. |
 | `manifest.json` | — | — | Machine-readable listing of these files with the summary numbers above. |
 
 ## The revision record (`vintages/`)
@@ -94,7 +94,7 @@ Revised periods so far — ONI: 0 · RONI: 1 · weekly Niño-3.4: 7 · SOI: 0 ·
 > NOAA Climate Prediction Center (producer). ENSO indices: Oceanic Niño Index, Relative Oceanic
 > Niño Index, weekly Niño-3.4 SST anomaly, Southern Oscillation Index, equatorial upper-ocean
 > heat content. Accessed via the *Pulse of the Pacific* data archive, https://elninotracker.org/archive/ ,
-> data as of 2026-11-12.
+> data as of 2026-11-13.
 
 For a fixed, recoverable snapshot cite a release bundle by its tag (for example
 `data-2026-11`) from https://github.com/ThePiTree/pulse-of-the-pacific/releases .
