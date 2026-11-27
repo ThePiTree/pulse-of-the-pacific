@@ -1,5 +1,5 @@
 {
-  "generated": "2026-11-24 02:52:08 UTC",
+  "generated": "2026-11-27 00:31:47 UTC",
   "site": "https://elninotracker.org/archive/",
   "files": [
     "enso_monthly_merged.csv",
@@ -19,7 +19,7 @@
     "index.html"
   ],
   "stats": {
-    "generated": "2026-11-24 02:52:08 UTC",
+    "generated": "2026-11-27 00:31:47 UTC",
     "oni_n": 921,
     "oni_span": "DJF 1950 → ASO 2026",
     "oni_latest": "ASO 2026",
@@ -39,6 +39,6 @@
     "rev_wksst": 8,
     "rev_soi": 0,
     "rev_heat": 3,
-    "runs_n": 31
+    "runs_n": 32
   }
 }

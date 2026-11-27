@@ -1,6 +1,6 @@
 # Pulse of the Pacific — Data Archive
 
-Generated from the pipeline run of 2026-11-24 02:52:08 UTC by `scripts/export_archive.py`.
+Generated from the pipeline run of 2026-11-27 00:31:47 UTC by `scripts/export_archive.py`.
 The archive is regenerated at the end of every scheduled data refresh (Mondays and
 Thursdays), so these files are exactly as current as the live site at https://elninotracker.org.
 
@@ -21,7 +21,7 @@ is in the public domain. Cite NOAA CPC as the producer and this archive as the a
 | `soi_3month.csv` | 907 | Feb 1951 → Aug 2026 | 3-month running mean of the Southern Oscillation Index (standardized Tahiti-minus-Darwin sea-level pressure), as published by CPC. Negative during El Niño. |
 | `heat_content_180w_100w.csv` | 574 | Jan 1979 → Oct 2026 | Upper-ocean (0–300 m) temperature anomaly averaged over the equatorial Pacific, 180°W–100°W. Subsurface heat leads the surface by months. |
 | `vintages/*.csv` | 5699 | since 2026-08-17 | **The revision record** — one file per series; see below. |
-| `pipeline_runs.csv` | 31 | since 2026-08-17 | Append-only log of every data refresh: UTC timestamp, sources refreshed, sources that failed. |
+| `pipeline_runs.csv` | 32 | since 2026-08-17 | Append-only log of every data refresh: UTC timestamp, sources refreshed, sources that failed. |
 | `manifest.json` | — | — | Machine-readable listing of these files with the summary numbers above. |
 
 ## The revision record (`vintages/`)
@@ -94,7 +94,7 @@ Revised periods so far — ONI: 0 · RONI: 1 · weekly Niño-3.4: 8 · SOI: 0 ·
 > NOAA Climate Prediction Center (producer). ENSO indices: Oceanic Niño Index, Relative Oceanic
 > Niño Index, weekly Niño-3.4 SST anomaly, Southern Oscillation Index, equatorial upper-ocean
 > heat content. Accessed via the *Pulse of the Pacific* data archive, https://elninotracker.org/archive/ ,
-> data as of 2026-11-24.
+> data as of 2026-11-27.
 
 For a fixed, recoverable snapshot cite a release bundle by its tag (for example
 `data-2026-11`) from https://github.com/ThePiTree/pulse-of-the-pacific/releases .
